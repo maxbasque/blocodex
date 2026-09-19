@@ -1,5 +1,8 @@
+import { config } from "dotenv";
+
+config({ path: ".env.local" });
+
 import { eq } from "drizzle-orm";
-import { db } from "./index";
 import { gyms, walls, gradeScale, profiles } from "./schema";
 
 const GYM_SLUG = "blocodex-demo";
@@ -16,6 +19,10 @@ const GRADES = [
 const WALL_NAMES = ["Cave", "Lead Wall"];
 
 async function main() {
+  // Dynamic import: db/index.ts reads DATABASE_URL at module-evaluation time,
+  // so it must load strictly after dotenv has populated process.env above.
+  const { db } = await import("./index");
+
   let gym = await db.query.gyms.findFirst({ where: eq(gyms.slug, GYM_SLUG) });
   if (!gym) {
     [gym] = await db
