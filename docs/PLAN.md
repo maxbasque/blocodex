@@ -52,7 +52,7 @@ points leaderboard and is a first-class part of the client UX (M2/M3).
 | Image processing | **sharp** on upload (M1) | Downscale to ~1600px WebP + thumbnail |
 | Photo viewer | **react-zoom-pan-pinch** (M1) | Pan/zoom so pins stay accurate on crowded walls |
 | Hosting | **Vercel** (app) + **Supabase** (data) | Zero ops. ~$20/mo Vercel Pro + ~$25/mo Supabase Pro ≈ predictable ~$45/mo; free tiers cover dev |
-| PWA | manifest now; service worker + offline in M4 | |
+| PWA | manifest now; service worker + offline in M5 | |
 
 **Portability:** app logic is in Next.js server code, not Postgres RLS, so the DB is "just
 Postgres." `profiles.authId` (nullable) points at the auth provider's user id — swapping
@@ -97,11 +97,11 @@ sends         id, profile_id, route_id, sent_at,
   — `planned` routes don't count toward the denominator.
 - **Setter attribution** = `routes.setterId` (was free-text `setter`); "what I've set"
   is `routes` filtered by `setterId`, across all sets, no join through anything else.
-- **Planning a set**: a route is created with `status = "planned"`, a `wallId`, and a
-  rough `gradeId` — no `photoId`/pin/`color` yet. Pin-tagging that same row later fills
-  those in and flips `status` to `"active"`. A set can publish once its planned routes
-  are all active (or an admin publishes anyway with some still planned, if that's ever
-  useful — no hard gate for M1).
+  In M1 this just defaults to the creating admin; a real per-setter workflow is M4.
+- **Planning a set** *(M4)*: a route is created with `status = "planned"`, a `wallId`,
+  and a rough `gradeId` — no `photoId`/pin/`color` yet. Pin-tagging that same row
+  later fills those in and flips `status` to `"active"`. M1 skips this and creates
+  routes directly as `active`.
 
 ## 5. Milestones
 
@@ -116,20 +116,15 @@ sends         id, profile_id, route_id, sent_at,
 - GitHub Actions CI: lint + typecheck + build + migration-drift check
 - Live on Supabase + Vercel (`blocodex.vercel.app`); magic-link login confirmed on a phone
 
-### M1 — Admin: sets, setters & route tagging
+### M1 — Admin: sets & route tagging
 - CRUD sets (draft → published → archived)
-- **Setter role:** `is_setter` flag on profiles; simple admin screen to
-  promote/demote setters
-- **Draft checklist:** a new set starts as a punch list of `planned` routes (wall +
-  rough grade, assigned setter, no pin) — a to-do view before anyone touches a photo
 - Photo upload → sharp resize → Supabase Storage; reorder
 - **Pin tagging UI:** tap photo to add a pin, drag to reposition, side panel for
-  color / grade / points / name / setter / free-form tags / notes (promotes a
-  `planned` route to `active`); pan-zoom viewer
-- **"My routes"**: a setter's own routes across all history, filterable by set
+  color / grade / points / name / notes; pan-zoom viewer. Routes are created
+  directly as `active` — the `planned`-status checklist workflow is M4, not here
 - Grade-scale editor
-- **Exit:** a setter can plan a set as a checklist, tag routes with style tags, pin
-  them in, and an admin can publish the finished set
+- **Exit:** admin can publish a full set with tagged, pinned routes — enough real
+  data for the gamification loop (M2/M3) to build and demo against
 
 ### M2 — Client: browse & log
 - Current-set view: photo gallery with pins; tap pin → route detail sheet
@@ -141,16 +136,31 @@ sends         id, profile_id, route_id, sent_at,
 ### M3 — Leaderboards, profiles & dex
 - Leaderboard: current set + all-time (+ optional 30-day)
 - Profile: total points, send timeline, per-set dex %, grade pyramid
-- **Exit:** the competitive + completionist loop works end to end
+- **Exit:** the competitive + completionist loop works end to end — **this is the
+  main objective; gamification ships before any setter tooling below**
 
-### M4 — PWA polish
+### M4 — Setter tools
+- **Setter role:** `is_setter` flag on profiles; simple admin screen to
+  promote/demote setters
+- **Draft checklist:** a set can start as a punch list of `planned` routes (wall +
+  rough grade, assigned setter, no pin yet) — a to-do view before anyone touches a
+  photo; pin-tagging a planned route promotes it to `active`
+- **Free-form route tags:** power / slab / technical / dynamic / ... in the pin
+  tagging side panel, many-to-many, autocomplete against existing gym tags
+- **Setter attribution:** `routes.setterId` becomes a real per-route assignment
+  (M1 just defaults it to whichever admin created the route)
+- **"My routes"**: a setter's own routes across all history, filterable by set
+- **Exit:** setters get their own lighter-weight planning/tracking workflow, on top
+  of the already-shipped climber-facing app
+
+### M5 — PWA polish
 - Manifest icons, install prompt
 - Service worker: offline read of the current set (photos + route data)
 - Offline send-logging queued and synced on reconnect (nice-to-have)
 - Image loading: blur-up thumbnails, correct `sizes`
 - **Exit:** installs cleanly, usable in gym wifi dead spots
 
-### M5 — Backlog
+### M6 — Backlog
 - New-set notification (push/email)
 - Route comments / beta / star ratings
 - CSV / JSON export (data ownership)
@@ -166,7 +176,7 @@ sends         id, profile_id, route_id, sent_at,
 | Vercel image/bandwidth cost creep | Photos from Supabase Storage CDN as pre-sized WebP, not the Next image optimizer |
 | Auth vendor lock-in | `profiles.authId` seam; auth isolated in `lib/auth.ts` + `lib/supabase/*` |
 | Points disputes when scale changes | Points derived + recomputed; documented; snapshot only if it bites |
-| Scope creep | Everything non-core is M5; schema already leaves room |
+| Scope creep | Everything non-core is M6; schema already leaves room |
 | `drizzle-kit` pulls an old `esbuild` (moderate dev-only advisory) | Dev tooling only, not shipped; revisit when drizzle-kit updates the dep |
 | Free-form route tags drift ("power" vs "Power" vs "powerful") | Case-insensitive unique constraint per gym + autocomplete against existing tags in the UI |
 
