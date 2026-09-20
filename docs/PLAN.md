@@ -1,6 +1,6 @@
 # Blocodex — Build Plan
 
-_Draft v2 · 2026-09-10_
+_Draft v3 · 2026-09-20_
 
 ## 1. What we're building
 
@@ -8,6 +8,9 @@ A mobile-first PWA for a climbing gym (single gym now, multi-gym-ready):
 
 - **Admin:** manage reset cycles ("sets"), upload wall photos, tag each route as a
   **pin** on a photo with color / grade / points, configure the grade→points scale, manage users.
+- **Setters:** a lighter admin role. Plan a new set as a draft checklist (wall +
+  rough grade + assigned setter, no pin yet), tag routes with free-form style tags
+  (power, slab, technical, dynamic, ...), and see "what I've set" across history.
 - **Client:** climbers browse the current set, open a route, log that they've done it,
   see their points and history, and compete on leaderboards.
 - **History:** every set, every send, and every past leaderboard is preserved forever.
@@ -32,6 +35,9 @@ points leaderboard and is a first-class part of the client UX (M2/M3).
 | Leaderboard history | **Stays public** — any past set's leaderboard is browsable, not just personal history |
 | Points curve | **100 → 1100 across 6 grades** (seed's original spread) — kept as-is |
 | Branding | **Placeholder** (dark theme, purple accent) until a real gym identity exists |
+| Setter role | **New `is_setter` role** on `profiles` — can plan/tag/pin routes and sets, not users/gyms/grade scale |
+| Route type tags | **Free-form, many-to-many** (`tags` + `route_tags`) — self-normalizing via autocomplete against existing gym tags, not an admin-curated fixed list |
+| Set planning | **Routes gain a `planned` status.** A draft route (wall + rough grade, no pin yet) is the same row that later gets pinned — no separate "planned routes" table, no conversion step |
 
 ## 3. Stack
 
@@ -62,18 +68,21 @@ Implemented in `db/schema.ts`. Summary:
 
 ```
 gyms          id, name, slug
-walls         id, gym_id, name, sort_order                 -- optional grouping ("Cave", "Lead Wall")
+walls         id, gym_id, name, sort_order                 -- optional grouping ("Cave", "Slab")
 grade_scale   id, gym_id, label, color_hint, default_points, sort_order
 sets          id, gym_id, name, set_date,
               published_at, archived_at, created_by         -- a reset cycle / "season"
 photos        id, set_id, wall_id, storage_path, thumb_path,
               width, height, caption, sort_order
-routes        id, set_id, photo_id,
+routes        id, set_id, wall_id, photo_id,                -- photo_id/pin_x/pin_y/color null while planned
               pin_x, pin_y,                                 -- normalized 0..1 relative to photo
               color, grade_id, points_override,
-              name, setter, notes, status(active|archived)
+              name, setter_id, notes,
+              status(planned|active|archived)
+tags          id, gym_id, label                             -- free-form; UNIQUE (gym_id, lower(label))
+route_tags    route_id, tag_id                               -- many-to-many, PK (route_id, tag_id)
 profiles      id, auth_id (nullable, unique), display_name,
-              avatar_url, is_admin
+              avatar_url, is_admin, is_setter
 sends         id, profile_id, route_id, sent_at,
               attempts, style(flash|redpoint|repeat), notes
               UNIQUE (profile_id, route_id)
@@ -84,11 +93,19 @@ sends         id, profile_id, route_id, sent_at,
 - **Leaderboard (current set)** = `SUM(points)` over a user's sends where `route.set_id = :setId`.
 - **Leaderboard (all-time)** = same, no set filter. Start as a plain query; promote to a
   materialized view only if it gets slow.
-- **Dex %** for a user in a set = `count(distinct sent route) / count(active routes in set)`.
+- **Dex %** for a user in a set = `count(distinct sent route) / count(active routes in set)`
+  — `planned` routes don't count toward the denominator.
+- **Setter attribution** = `routes.setterId` (was free-text `setter`); "what I've set"
+  is `routes` filtered by `setterId`, across all sets, no join through anything else.
+- **Planning a set**: a route is created with `status = "planned"`, a `wallId`, and a
+  rough `gradeId` — no `photoId`/pin/`color` yet. Pin-tagging that same row later fills
+  those in and flips `status` to `"active"`. A set can publish once its planned routes
+  are all active (or an admin publishes anyway with some still planned, if that's ever
+  useful — no hard gate for M1).
 
 ## 5. Milestones
 
-### M0 — Foundation ✅ (scaffolded this session)
+### M0 — Foundation ✅ done (2026-09-18 → 2026-09-20)
 - Next.js 16 + TS + Tailwind v4, ESLint
 - Drizzle schema + config + idempotent seed (`db/seed.ts`)
 - Supabase server/browser/proxy clients; `proxy.ts` refreshes the session
@@ -97,18 +114,22 @@ sends         id, profile_id, route_id, sent_at,
 - `/admin` route group gated on `is_admin`, dashboard with counts
 - `/api/health`, PWA manifest + icon
 - GitHub Actions CI: lint + typecheck + build + migration-drift check
+- Live on Supabase + Vercel (`blocodex.vercel.app`); magic-link login confirmed on a phone
 
-**Remaining to call M0 done:** create the Supabase project, fill `.env.local`, run
-`npm run db:generate && npm run db:migrate && npm run db:seed`, deploy to Vercel, confirm
-login works on a phone.
-
-### M1 — Admin: sets & route tagging
+### M1 — Admin: sets, setters & route tagging
 - CRUD sets (draft → published → archived)
+- **Setter role:** `is_setter` flag on profiles; simple admin screen to
+  promote/demote setters
+- **Draft checklist:** a new set starts as a punch list of `planned` routes (wall +
+  rough grade, assigned setter, no pin) — a to-do view before anyone touches a photo
 - Photo upload → sharp resize → Supabase Storage; reorder
 - **Pin tagging UI:** tap photo to add a pin, drag to reposition, side panel for
-  color / grade / points / name / setter / notes; pan-zoom viewer
+  color / grade / points / name / setter / free-form tags / notes (promotes a
+  `planned` route to `active`); pan-zoom viewer
+- **"My routes"**: a setter's own routes across all history, filterable by set
 - Grade-scale editor
-- **Exit:** admin can publish a full set with tagged routes
+- **Exit:** a setter can plan a set as a checklist, tag routes with style tags, pin
+  them in, and an admin can publish the finished set
 
 ### M2 — Client: browse & log
 - Current-set view: photo gallery with pins; tap pin → route detail sheet
@@ -132,7 +153,6 @@ login works on a phone.
 ### M5 — Backlog
 - New-set notification (push/email)
 - Route comments / beta / star ratings
-- Setter accounts & attribution
 - CSV / JSON export (data ownership)
 - Multi-wall dashboards, multi-gym tenant switch, custom domains
 - Anti-cheat niceties (rate limits, admin "void send")
@@ -148,6 +168,7 @@ login works on a phone.
 | Points disputes when scale changes | Points derived + recomputed; documented; snapshot only if it bites |
 | Scope creep | Everything non-core is M5; schema already leaves room |
 | `drizzle-kit` pulls an old `esbuild` (moderate dev-only advisory) | Dev tooling only, not shipped; revisit when drizzle-kit updates the dep |
+| Free-form route tags drift ("power" vs "Power" vs "powerful") | Case-insensitive unique constraint per gym + autocomplete against existing tags in the UI |
 
 ## 7. Open questions — resolved 2026-09-20
 
