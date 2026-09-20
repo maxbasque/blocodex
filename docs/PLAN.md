@@ -27,6 +27,11 @@ points leaderboard and is a first-class part of the client UX (M2/M3).
 | Hosting priorities | **Zero ops + low, predictable cost** |
 | Reset cycles | **Seasons / "sets" with full history** — archived routes, preserved sends & leaderboards |
 | Name | **Blocodex** |
+| Wall type | **Bouldering only** — no lead/top-rope walls, single grade scale |
+| Grading | **Colors-as-grades**, each labeled with its V-scale range (e.g. "Yellow (V0–V1)") |
+| Leaderboard history | **Stays public** — any past set's leaderboard is browsable, not just personal history |
+| Points curve | **100 → 1100 across 6 grades** (seed's original spread) — kept as-is |
+| Branding | **Placeholder** (dark theme, purple accent) until a real gym identity exists |
 
 ## 3. Stack
 
@@ -144,11 +149,16 @@ login works on a phone.
 | Scope creep | Everything non-core is M5; schema already leaves room |
 | `drizzle-kit` pulls an old `esbuild` (moderate dev-only advisory) | Dev tooling only, not shipped; revisit when drizzle-kit updates the dep |
 
-## 7. Open questions
+## 7. Open questions — resolved 2026-09-20
 
-1. Grade system: V-scale (bouldering), French / YDS (routes), or the gym's own colors-as-grades?
-   (Seed currently uses colors → points.)
-2. Does the gym separate **bouldering vs. lead/top-rope**? Affects `walls` + how many grade scales.
-3. Should past-set leaderboards stay public, or collapse to personal history after a set archives?
-4. Any existing brand / logo / colors from the old site to match?
-5. Points curve — is the seed's 100 → 1100 spread roughly right, or flatter/steeper?
+1. ~~Grade system~~ → **Colors-as-grades**, each labeled with its V-scale range
+   (e.g. "Yellow (V0–V1)"). See §2.
+2. ~~Bouldering vs. lead/top-rope~~ → **Bouldering only**. `walls` stays as an
+   optional grouping (e.g. "Cave", "Slab") with no lead-specific handling needed.
+3. ~~Past-set leaderboard visibility~~ → **Stays public**.
+4. ~~Existing brand~~ → **None** — placeholder branding (dark theme, purple accent)
+   stays until a real gym identity shows up.
+5. ~~Points curve~~ → **Kept as-is** (100 → 1100 across 6 grades); revisit once real
+   climbers are using it.
+
+No open questions remain blocking M1.

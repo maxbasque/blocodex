@@ -7,16 +7,18 @@ import { gyms, walls, gradeScale, profiles } from "./schema";
 
 const GYM_SLUG = "blocodex-demo";
 
+// Colors are the primary grade; the V-scale range is annotated in the label
+// per docs/PLAN.md §7 (bouldering-only gym, resolved 2026-09-20).
 const GRADES = [
-  { label: "Yellow", colorHint: "#facc15", defaultPoints: 100, sortOrder: 0 },
-  { label: "Green", colorHint: "#22c55e", defaultPoints: 300, sortOrder: 1 },
-  { label: "Blue", colorHint: "#3b82f6", defaultPoints: 500, sortOrder: 2 },
-  { label: "Purple", colorHint: "#a855f7", defaultPoints: 700, sortOrder: 3 },
-  { label: "Red", colorHint: "#ef4444", defaultPoints: 900, sortOrder: 4 },
-  { label: "Black", colorHint: "#171717", defaultPoints: 1100, sortOrder: 5 },
+  { label: "Yellow (V0–V1)", colorHint: "#facc15", defaultPoints: 100, sortOrder: 0 },
+  { label: "Green (V1–V2)", colorHint: "#22c55e", defaultPoints: 300, sortOrder: 1 },
+  { label: "Blue (V2–V3)", colorHint: "#3b82f6", defaultPoints: 500, sortOrder: 2 },
+  { label: "Purple (V3–V4)", colorHint: "#a855f7", defaultPoints: 700, sortOrder: 3 },
+  { label: "Red (V4–V5)", colorHint: "#ef4444", defaultPoints: 900, sortOrder: 4 },
+  { label: "Black (V5+)", colorHint: "#171717", defaultPoints: 1100, sortOrder: 5 },
 ] as const;
 
-const WALL_NAMES = ["Cave", "Lead Wall"];
+const WALL_NAMES = ["Cave", "Slab"];
 
 async function main() {
   // Dynamic import: db/index.ts reads DATABASE_URL at module-evaluation time,
