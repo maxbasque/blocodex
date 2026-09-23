@@ -13,7 +13,7 @@ export const gyms = pgTable("gyms", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
-});
+}).enableRLS();
 
 export const walls = pgTable("walls", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -22,7 +22,7 @@ export const walls = pgTable("walls", {
     .references(() => gyms.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
-});
+}).enableRLS();
 
 export const gradeScale = pgTable("grade_scale", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -33,7 +33,7 @@ export const gradeScale = pgTable("grade_scale", {
   colorHint: text("color_hint"),
   defaultPoints: integer("default_points").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
-});
+}).enableRLS();
 
 export const sets = pgTable("sets", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -45,7 +45,7 @@ export const sets = pgTable("sets", {
   publishedAt: timestamp("published_at", { withTimezone: true }),
   archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdBy: uuid("created_by"),
-});
+}).enableRLS();
 
 export const photos = pgTable("photos", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -61,7 +61,7 @@ export const photos = pgTable("photos", {
   height: integer("height").notNull(),
   caption: text("caption"),
   sortOrder: integer("sort_order").notNull().default(0),
-});
+}).enableRLS();
 
 export const routeStatusValues = ["active", "archived"] as const;
 export type RouteStatus = (typeof routeStatusValues)[number];
@@ -87,7 +87,7 @@ export const routes = pgTable("routes", {
   status: text("status", { enum: routeStatusValues })
     .notNull()
     .default("active"),
-});
+}).enableRLS();
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -95,7 +95,7 @@ export const profiles = pgTable("profiles", {
   displayName: text("display_name").notNull(),
   avatarUrl: text("avatar_url"),
   isAdmin: boolean("is_admin").notNull().default(false),
-});
+}).enableRLS();
 
 export const sendStyleValues = ["flash", "redpoint", "repeat"] as const;
 export type SendStyle = (typeof sendStyleValues)[number];
@@ -118,4 +118,4 @@ export const sends = pgTable(
     notes: text("notes"),
   },
   (table) => [uniqueIndex("sends_profile_route_unique").on(table.profileId, table.routeId)]
-);
+).enableRLS();
