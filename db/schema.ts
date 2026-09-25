@@ -82,7 +82,9 @@ export const routes = pgTable("routes", {
   }),
   pointsOverride: integer("points_override"),
   name: text("name"),
-  setter: text("setter"),
+  setterId: uuid("setter_id").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
   notes: text("notes"),
   status: text("status", { enum: routeStatusValues })
     .notNull()

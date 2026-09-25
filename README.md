@@ -38,6 +38,9 @@ npm run db:migrate    # apply them
 npm run db:seed       # one gym, a color grade scale, two walls
 ```
 
+Wall photos live in a public Supabase Storage bucket named `photos`, created
+automatically on the first upload (needs `SUPABASE_SERVICE_ROLE_KEY`).
+
 To make yourself an admin: sign in once, copy your user id from **Supabase →
 Authentication → Users** into `ADMIN_AUTH_ID`, then re-run `npm run db:seed`.
 
@@ -64,6 +67,8 @@ npm run dev           # http://localhost:3000
 ```
 app/
   (admin)/        admin route group, gated on profiles.is_admin
+    admin/sets/   sets, photo upload, pin-tagging editor
+    admin/gym/    grade scale + walls editor
   auth/           callback + signout route handlers
   api/health/     env + DB check
   login/          magic-link + Google
@@ -74,9 +79,11 @@ db/
   seed.ts
 lib/
   auth.ts         getCurrentUser / requireUser / requireAdmin
+  gym.ts          current gym (single-gym for now)
+  photos.ts       Storage bucket + public photo URLs
   points.ts       derived route point value
   env.ts          runtime env validation (assertEnv)
-  supabase/       server / client / proxy clients
+  supabase/       server / browser / service-role (admin.ts) clients
 proxy.ts          Supabase session refresh (Next 16's renamed "middleware")
 ```
 

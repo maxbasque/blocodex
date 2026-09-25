@@ -1,0 +1,2 @@
+ALTER TABLE "routes" ADD COLUMN "setter_id" uuid;--> statement-breakpoint
+ALTER TABLE "routes" ADD CONSTRAINT "routes_setter_id_profiles_id_fk" FOREIGN KEY ("setter_id") REFERENCES "public"."profiles"("id") ON DELETE set null ON UPDATE no action;

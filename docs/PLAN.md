@@ -1,6 +1,6 @@
 # Blocodex — Build Plan
 
-_Draft v3 · 2026-09-20_
+_Draft v3 · 2026-09-20 · M1 built 2026-09-24_
 
 ## 1. What we're building
 
@@ -77,7 +77,7 @@ photos        id, set_id, wall_id, storage_path, thumb_path,
 routes        id, set_id, wall_id, photo_id,                -- photo_id/pin_x/pin_y/color null while planned
               pin_x, pin_y,                                 -- normalized 0..1 relative to photo
               color, grade_id, points_override,
-              name, setter_id, notes,
+              name, setter_id, notes,                       -- setter_id → profiles
               status(planned|active|archived)
 tags          id, gym_id, label                             -- free-form; UNIQUE (gym_id, lower(label))
 route_tags    route_id, tag_id                               -- many-to-many, PK (route_id, tag_id)
@@ -116,15 +116,26 @@ sends         id, profile_id, route_id, sent_at,
 - GitHub Actions CI: lint + typecheck + build + migration-drift check
 - Live on Supabase + Vercel (`blocodex.vercel.app`); magic-link login confirmed on a phone
 
-### M1 — Admin: sets & route tagging
-- CRUD sets (draft → published → archived)
-- Photo upload → sharp resize → Supabase Storage; reorder
+### M1 — Admin: sets & route tagging ✅ built (2026-09-24)
+- CRUD sets (draft → published → archived). Archiving flips the set's routes to
+  `archived` (unarchive flips them back); only drafts can be deleted
+- Photo upload → sharp resize → Supabase Storage; reorder. Browser uploads the
+  original straight to Storage via a signed URL (phone photos exceed the 1MB
+  Server Action / ~4.5MB Vercel body limits), then a Server Action EXIF-rotates,
+  caps at 1600px WebP + 400px thumb, and drops the original. The public `photos`
+  bucket is created on first upload
 - **Pin tagging UI:** tap photo to add a pin, drag to reposition, side panel for
   color / grade / points / name / notes; pan-zoom viewer. Routes are created
   directly as `active` — the `planned`-status checklist workflow is M4, not here
-- Grade-scale editor
+- Grade-scale editor (+ walls editor)
+- `routes.setter` (text) → `routes.setterId` (FK → profiles), defaulted to the
+  creating admin
+- Guard rails: deleting a grade in use, or a photo/route/set with logged sends,
+  is refused rather than silently zeroing points or erasing history
 - **Exit:** admin can publish a full set with tagged, pinned routes — enough real
-  data for the gamification loop (M2/M3) to build and demo against
+  data for the gamification loop (M2/M3) to build and demo against. Verified
+  end-to-end in a headless browser against the live Supabase project; still
+  needs a real set shot and tagged on a phone
 
 ### M2 — Client: browse & log
 - Current-set view: photo gallery with pins; tap pin → route detail sheet
